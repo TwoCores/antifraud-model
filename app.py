@@ -4,7 +4,7 @@ from catboost import CatBoostClassifier, Pool
 
 from constants import FEATURES, CATEGORICAL_FEATURES
 
-MODEL_PATH = "model/catboost_fraud_model.cbm"
+MODEL_PATH = "catboost_fraud_model.cbm"
 
 model = CatBoostClassifier()
 model.load_model(MODEL_PATH)
