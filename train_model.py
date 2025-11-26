@@ -1,7 +1,7 @@
 import pandas as pd
 from catboost import CatBoostClassifier, Pool
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report, roc_auc_score
+from sklearn.metrics import classification_report, precision_score, recall_score, fbeta_score, roc_auc_score
 from sklearn.ensemble import IsolationForest
 
 from constants import FEATURES, CATEGORICAL_FEATURES, IFOREST_FEATURES, TARGET
@@ -34,7 +34,7 @@ def main():
     test_pool = Pool(X_test, y_test, cat_features=CATEGORICAL_FEATURES)
 
     model = CatBoostClassifier(
-        iterations=1000,
+        iterations=200,
         learning_rate=0.05,
         depth=8,
         loss_function="Logloss",
@@ -52,7 +52,15 @@ def main():
     print("Classification Report:")
     print(classification_report(y_test, preds))
 
-    print("ROC-AUC:", roc_auc_score(y_test, preds_proba))
+    precision = precision_score(y_test, preds)
+    recall = recall_score(y_test, preds)
+    fbeta = fbeta_score(y_test, preds, beta=1)
+    roc_auc = roc_auc_score(y_test, preds_proba)
+
+    print(f"Precision: {precision:.4f}")
+    print(f"Recall: {recall:.4f}")
+    print(f"F1-score (F-beta=1): {fbeta:.4f}")
+    print(f"ROC-AUC: {roc_auc:.4f}")
 
     model.save_model(MODEL_PATH)
     print(f"Model saved to {MODEL_PATH}")
