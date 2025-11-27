@@ -1,20 +1,30 @@
+import os
 import logging
+import json
+from threading import Lock
 from fastapi import FastAPI
+from fastapi import Body, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from catboost import CatBoostClassifier, Pool
-import json
-import os
+
+from constants import FEATURES, CATEGORICAL_FEATURES
 
 logger = logging.getLogger(__name__)
 
-from constants import FEATURES, CATEGORICAL_FEATURES
 
 MODEL_PATH = "catboost_fraud_model.cbm"
 MODEL_METADATA_PATH = "model_metadata.json"
 
 model = CatBoostClassifier()
 model.load_model(MODEL_PATH)
+
+_metadata_lock = Lock()
+if os.path.exists(MODEL_METADATA_PATH):
+    with open(MODEL_METADATA_PATH, "r") as f:
+        model_metadata = json.load(f)
+else:
+    model_metadata = {}
 
 app = FastAPI(title="Fraud Detection API")
 
@@ -50,6 +60,7 @@ class ModelFeatures(BaseModel):
     # direction_frequency: float = 0.0
     # direction_fraud_rate: float = 0.0
 
+
 @app.post("/predict")
 def predict_fraud(data: ModelFeatures):
     logger.error(f"Received data for prediction: {data}")
@@ -60,19 +71,26 @@ def predict_fraud(data: ModelFeatures):
     )
 
     proba = model.predict_proba(pool)[0][1]
-    block = int(proba >= 0.4)
+    current_threshold = model_metadata.get("threshold", 0.4)
+    block = int(proba >= current_threshold)
 
     return {
         "fraud_probability": round(proba, 10),
-        "block_transaction": bool(block)
+        "block_transaction": bool(block),
+        "threshold": current_threshold
     }
 
 @app.get("/model_metadata")
 def get_model_metadata():
-    if not os.path.exists(MODEL_METADATA_PATH):
-        return {"error": f"{MODEL_METADATA_PATH} not found. Please train the model first."}
+    with _metadata_lock:
+        return dict(model_metadata)
 
-    with open(MODEL_METADATA_PATH, "r") as f:
-        model_metadata = json.load(f)
 
-    return model_metadata
+# TODO: for now, it stores in memory only and is lost after restart
+@app.post("/set_threshold")
+def set_threshold(threshold: float = Query(..., alias="v", description="New threshold value")):
+    model_metadata["threshold"] = threshold
+
+    return {
+        "threshold": model_metadata["threshold"]
+    }
