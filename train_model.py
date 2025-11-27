@@ -4,25 +4,21 @@ import pandas as pd
 from catboost import CatBoostClassifier, Pool
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, precision_score, recall_score, fbeta_score, roc_auc_score
-from sklearn.ensemble import IsolationForest
 
-from constants import FEATURES, CATEGORICAL_FEATURES, IFOREST_FEATURES, TARGET
+from constants import FEATURES, CATEGORICAL_FEATURES, TARGET
 
 DATASET_PATH = "clients_patterns_dataset.csv"
 MODEL_PATH = "catboost_fraud_model.cbm"
 
 def main():
-    df = pd.read_csv(DATASET_PATH)
+    patterns_df = pd.read_csv("datasets/clients_patterns_dataset.csv")
+    transactions_df = pd.read_csv("datasets/transactions_dataset.csv")
 
-    numeric_cols = df.select_dtypes(include=["object"]).columns.tolist()
+    df = pd.merge(transactions_df, patterns_df, on=["cst_dim_id", "transdate"], how="left")
 
-    for col in numeric_cols:
-        if col in ("var_login_interval_30d"):
-            df[col] = df[col].str.replace(",", ".").astype(float)
+    fix_data_types(df)
 
-    simulate_target(df)
-
-    X = df.drop(columns=[TARGET, "transid", "transdate"])
+    X = df.drop(columns=[TARGET, "cst_dim_id", "transdate", "transdatetime", "docno"])
     y = df[TARGET]
 
     for cat_col in CATEGORICAL_FEATURES:
@@ -35,21 +31,41 @@ def main():
     train_pool = Pool(X_train, y_train, cat_features=CATEGORICAL_FEATURES)
     test_pool = Pool(X_test, y_test, cat_features=CATEGORICAL_FEATURES)
 
+    iterations = 1000
+    learning_rate = 0.03
+    depth = 6
+    loss_function = "Logloss"
+    eval_metric = "AUC"
+    random_seed = 30
+    class_weights = [1, 15]
+    # early_stopping_rounds = 100
+    l2_leaf_reg = 5
+    border_count = 254
+    bagging_temperature = 0.5
+    min_data_in_leaf = 20
+    verbose = 100
+
     model = CatBoostClassifier(
-        iterations=200,
-        learning_rate=0.05,
-        depth=8,
-        loss_function="Logloss",
-        eval_metric="AUC",
-        random_seed=42,
-        class_weights=[1, 10],
-        verbose=100
+        iterations=iterations,
+        learning_rate=learning_rate,
+        depth=depth,
+        loss_function=loss_function,
+        eval_metric=eval_metric,
+        random_seed=random_seed,
+        class_weights=class_weights,
+        # early_stopping_rounds=100,
+        l2_leaf_reg=l2_leaf_reg,
+        border_count=border_count,
+        bagging_temperature=bagging_temperature,
+        min_data_in_leaf=min_data_in_leaf,
+        verbose=verbose
     )
 
     model.fit(train_pool, eval_set=test_pool)
 
-    preds = model.predict(test_pool)
     preds_proba = model.predict_proba(test_pool)[:, 1]
+    threshold = 0.4
+    preds = (preds_proba >= threshold).astype(int)
 
     print("Classification Report:")
     print(classification_report(y_test, preds))
@@ -64,48 +80,54 @@ def main():
     print(f"F1-score (F-beta=1): {fbeta:.4f}")
     print(f"ROC-AUC: {roc_auc:.4f}")
 
-
     model_metadata = {
         "model": "CatBoost",
         "model_type": "CatBoostClassifier",
-        "model_name": "catboost_fraud_model",
+        "model_name": "catboost_antifraud_model",
         "model_params": {
-            "iterations": 200,
-            "learning_rate": 0.05,
-            "depth": 8,
-            "loss_function": "Logloss",
-            "eval_metric": "AUC",
-            "random_seed": 42,
-            "class_weights": [1, 10]
+            "iterations": iterations,
+            "learning_rate": learning_rate,
+            "depth": depth,
+            "loss_function": loss_function,
+            "eval_metric": eval_metric,
+            "random_seed": random_seed,
+            "class_weights": class_weights,
+            "l2_leaf_reg": l2_leaf_reg,
+            "border_count": border_count,
+            "bagging_temperature": bagging_temperature,
+            "min_data_in_leaf": min_data_in_leaf,
+            "verbose": verbose
         },
         "train_test_split": {
             "test_size": 0.2,
             "random_state": 42,
             "stratify": True
         },
+        "threshold": threshold,
         "precision": precision,
         "recall": recall,
         "fbeta": fbeta,
         "roc_auc": roc_auc,
         "features": FEATURES,
         "categorical_features": CATEGORICAL_FEATURES,
-        "iforest_features": IFOREST_FEATURES,
         "target": TARGET,
         "train_size": len(X_train),
         "test_size": len(X_test),
         "created_at": datetime.datetime.now().isoformat(),
     }
-    save_metrics(model_metadata)
+    save_model_metadata(model_metadata)
 
     model.save_model(MODEL_PATH)
     print(f"Model saved to {MODEL_PATH}")
 
-def simulate_target(df):
-    clf = IsolationForest(contamination=0.05)
-    df[TARGET] = (clf.fit_predict(df[IFOREST_FEATURES]) == -1).astype(int)
+def fix_data_types(df):
+    numeric_cols = df.select_dtypes(include=["object"]).columns.tolist()
+    for col in numeric_cols:
+        if col in ("var_login_interval_30d"):
+            df[col] = df[col].str.replace(",", ".").astype(float)
 
-# TODO: temporary solution
-def save_metrics(model_metadata, path="model_metadata.json"):
+# TODO: save to json, temporary solution
+def save_model_metadata(model_metadata, path="model_metadata.json"):
     try:
         with open(path, "r") as f:
             existing = json.load(f)
@@ -117,7 +139,7 @@ def save_metrics(model_metadata, path="model_metadata.json"):
 
     with open(path, "w") as f:
         json.dump(existing, f, indent=4)
-    print(f"Metrics updated in {path}")
+    print(f"Model metadata updated in {path}")
 
 
 if __name__ == "__main__":
