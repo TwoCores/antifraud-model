@@ -1,10 +1,12 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from catboost import CatBoostClassifier, Pool
-
+import json
+import os
 from constants import FEATURES, CATEGORICAL_FEATURES
 
 MODEL_PATH = "catboost_fraud_model.cbm"
+MODEL_METADATA_PATH = "model_metadata.json"
 
 model = CatBoostClassifier()
 model.load_model(MODEL_PATH)
@@ -38,11 +40,19 @@ def predict_fraud(data: ModelFeatures):
         feature_names=FEATURES,
         cat_features=CATEGORICAL_FEATURES
     )
-
     proba = model.predict_proba(pool)[0][1]
     block = int(proba >= 0.5)
-
     return {
         "fraud_probability": round(proba, 10),
         "block_transaction": bool(block)
     }
+
+@app.get("/model_metadata")
+def get_model_metadata():
+    if not os.path.exists(MODEL_METADATA_PATH):
+        return {"error": f"{MODEL_METADATA_PATH} not found. Please train the model first."}
+
+    with open(MODEL_METADATA_PATH, "r") as f:
+        model_metadata = json.load(f)
+
+    return model_metadata

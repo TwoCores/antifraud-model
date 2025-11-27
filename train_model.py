@@ -1,3 +1,5 @@
+import datetime
+import json
 import pandas as pd
 from catboost import CatBoostClassifier, Pool
 from sklearn.model_selection import train_test_split
@@ -62,12 +64,61 @@ def main():
     print(f"F1-score (F-beta=1): {fbeta:.4f}")
     print(f"ROC-AUC: {roc_auc:.4f}")
 
+
+    model_metadata = {
+        "model": "CatBoost",
+        "model_type": "CatBoostClassifier",
+        "model_name": "catboost_fraud_model",
+        "model_params": {
+            "iterations": 200,
+            "learning_rate": 0.05,
+            "depth": 8,
+            "loss_function": "Logloss",
+            "eval_metric": "AUC",
+            "random_seed": 42,
+            "class_weights": [1, 10]
+        },
+        "train_test_split": {
+            "test_size": 0.2,
+            "random_state": 42,
+            "stratify": True
+        },
+        "precision": precision,
+        "recall": recall,
+        "fbeta": fbeta,
+        "roc_auc": roc_auc,
+        "features": FEATURES,
+        "categorical_features": CATEGORICAL_FEATURES,
+        "iforest_features": IFOREST_FEATURES,
+        "target": TARGET,
+        "train_size": len(X_train),
+        "test_size": len(X_test),
+        "created_at": datetime.datetime.now().isoformat(),
+    }
+    save_metrics(model_metadata)
+
     model.save_model(MODEL_PATH)
     print(f"Model saved to {MODEL_PATH}")
 
 def simulate_target(df):
     clf = IsolationForest(contamination=0.05)
     df[TARGET] = (clf.fit_predict(df[IFOREST_FEATURES]) == -1).astype(int)
+
+# TODO: temporary solution
+def save_metrics(model_metadata, path="model_metadata.json"):
+    try:
+        with open(path, "r") as f:
+            existing = json.load(f)
+        if not isinstance(existing, dict):
+            existing = {}
+    except (FileNotFoundError, json.JSONDecodeError):
+        existing = {}
+    existing.update(model_metadata)
+
+    with open(path, "w") as f:
+        json.dump(existing, f, indent=4)
+    print(f"Metrics updated in {path}")
+
 
 if __name__ == "__main__":
     main()
