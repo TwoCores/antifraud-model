@@ -137,7 +137,7 @@ catboost_info/
 # Data files
 # *.csv
 *.tsv
-*.json
+# *.json
 *.parquet
 *.feather
 
