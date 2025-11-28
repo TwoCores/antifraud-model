@@ -19,11 +19,84 @@
         "min_data_in_leaf": 20,
         "verbose": 100
     },
-    "train_test_split": {
-        "test_size": 0.2,
-        "random_state": 42,
-        "stratify": true
-    },
+    "feature_importance": [
+        {
+            "Feature Id": "direction",
+            "Importances": 38.90724190139686
+        },
+        {
+            "Feature Id": "amount",
+            "Importances": 16.286968200188774
+        },
+        {
+            "Feature Id": "last_phone_model_categorical",
+            "Importances": 5.022578577254829
+        },
+        {
+            "Feature Id": "burstiness_login_interval",
+            "Importances": 3.5418642972555037
+        },
+        {
+            "Feature Id": "logins_7d_over_30d_ratio",
+            "Importances": 3.541799147293357
+        },
+        {
+            "Feature Id": "zscore_avg_login_interval_7d",
+            "Importances": 3.5259519379493263
+        },
+        {
+            "Feature Id": "last_os_categorical",
+            "Importances": 3.2817978205443796
+        },
+        {
+            "Feature Id": "monthly_os_changes",
+            "Importances": 3.059965028320386
+        },
+        {
+            "Feature Id": "ewm_login_interval_7d",
+            "Importances": 3.051585927105576
+        },
+        {
+            "Feature Id": "avg_login_interval_30d",
+            "Importances": 2.756342368315094
+        },
+        {
+            "Feature Id": "freq_change_7d_vs_mean",
+            "Importances": 2.5749102388781466
+        },
+        {
+            "Feature Id": "login_frequency_7d",
+            "Importances": 2.5347638815091913
+        },
+        {
+            "Feature Id": "fano_factor_login_interval",
+            "Importances": 2.493072836948134
+        },
+        {
+            "Feature Id": "login_frequency_30d",
+            "Importances": 2.2076408634856017
+        },
+        {
+            "Feature Id": "var_login_interval_30d",
+            "Importances": 2.2068509325946266
+        },
+        {
+            "Feature Id": "std_login_interval_30d",
+            "Importances": 2.1636741678024847
+        },
+        {
+            "Feature Id": "logins_last_30_days",
+            "Importances": 1.1284146439527516
+        },
+        {
+            "Feature Id": "logins_last_7_days",
+            "Importances": 1.0272804074917052
+        },
+        {
+            "Feature Id": "monthly_phone_model_changes",
+            "Importances": 0.6872968217132381
+        }
+    ],
     "threshold": 0.4,
     "precision": 0.36231884057971014,
     "recall": 0.7575757575757576,

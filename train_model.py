@@ -7,7 +7,7 @@ from sklearn.metrics import classification_report, precision_score, recall_score
 
 from constants import FEATURES, CATEGORICAL_FEATURES, TARGET
 
-DATASET_PATH = "clients_patterns_dataset.csv"
+
 MODEL_PATH = "catboost_fraud_model.cbm"
 
 def main():
@@ -70,6 +70,8 @@ def main():
     print("Classification Report:")
     print(classification_report(y_test, preds))
 
+    feature_importance = model.get_feature_importance(prettified=True)
+
     precision = precision_score(y_test, preds)
     recall = recall_score(y_test, preds)
     fbeta = fbeta_score(y_test, preds, beta=1)
@@ -98,11 +100,7 @@ def main():
             "min_data_in_leaf": min_data_in_leaf,
             "verbose": verbose
         },
-        "train_test_split": {
-            "test_size": 0.2,
-            "random_state": 42,
-            "stratify": True
-        },
+        "feature_importance": feature_importance.to_dict(orient="records"),
         "threshold": threshold,
         "precision": precision,
         "recall": recall,
