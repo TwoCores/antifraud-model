@@ -1,12 +1,16 @@
 import datetime
 import json
 import pandas as pd
+import matplotlib.pyplot as plt
 from catboost import CatBoostClassifier, Pool
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, precision_score, recall_score, fbeta_score, roc_auc_score
+import shap
 
 from constants import FEATURES, CATEGORICAL_FEATURES, TARGET
 
+
+shap.initjs()
 
 MODEL_PATH = "catboost_fraud_model.cbm"
 
@@ -114,6 +118,26 @@ def main():
         "created_at": datetime.datetime.now().isoformat(),
     }
     save_model_metadata(model_metadata)
+
+    print("Generating SHAP values and saving summary plot...")
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer(X_test)
+    
+    shap.save_html("shap/shap_summary.html", shap.plots.force(shap_values[0, ...]))
+
+    plt.figure(figsize=(10, 8))
+    shap.summary_plot(shap_values, X_test, plot_type="bar", show=False)
+    plt.tight_layout()
+    plt.savefig("shap/shap_feature_importance.png", dpi=300, bbox_inches='tight')
+    plt.close()
+    print("SHAP feature importance plot saved to shap/shap_feature_importance.png")
+
+    plt.figure(figsize=(10, 8))
+    shap.summary_plot(shap_values, X_test, show=False)
+    plt.tight_layout()
+    plt.savefig("shap/shap_summary_plot.png", dpi=300, bbox_inches='tight')
+    plt.close()
+    print("SHAP summary plot saved to shap/shap_summary_plot.png")
 
     model.save_model(MODEL_PATH)
     print(f"Model saved to {MODEL_PATH}")
